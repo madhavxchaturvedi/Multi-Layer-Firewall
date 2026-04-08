@@ -4,6 +4,12 @@ import axios from 'axios'
 
 const API = '/api'
 
+// Authenticated axios instance — sends X-Api-Key on every request
+// Set VITE_API_KEY in frontend/.env to match backend API_KEY
+const authAxios = axios.create({
+  headers: { 'x-api-key': import.meta.env.VITE_API_KEY || 'waf-dev-key' }
+})
+
 export const fetchStats = createAsyncThunk('waf/fetchStats', async () => {
   const { data } = await axios.get(`${API}/stats`)
   return data
@@ -25,17 +31,17 @@ export const fetchBanned = createAsyncThunk('waf/fetchBanned', async () => {
 })
 
 export const banIP = createAsyncThunk('waf/banIP', async ({ ip, reason, permanent }) => {
-  const { data } = await axios.post(`${API}/ban`, { ip, reason, permanent })
+  const { data } = await authAxios.post(`${API}/ban`, { ip, reason, permanent })
   return { ip, data }
 })
 
 export const unbanIP = createAsyncThunk('waf/unbanIP', async (ip) => {
-  await axios.delete(`${API}/ban/${ip}`)
+  await authAxios.delete(`${API}/ban/${ip}`)
   return ip
 })
 
 export const simulateAttack = createAsyncThunk('waf/simulate', async (type) => {
-  const { data } = await axios.post(`${API}/simulate`, { type })
+  const { data } = await authAxios.post(`${API}/simulate`, { type })
   return data
 })
 

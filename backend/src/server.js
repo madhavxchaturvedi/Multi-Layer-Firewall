@@ -34,17 +34,22 @@ io.on('connection', (socket) => {
 
 // ── Global Middleware ─────────────────────────────────────────────────────────
 app.set('trust proxy', true)
-app.use(cors({ origin: '*' }))
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH']
+}))
 app.use(helmet({ contentSecurityPolicy: false }))
 app.use(morgan('combined', { stream: { write: msg => logger.http(msg.trim()) } }))
 app.use(express.json({ limit: '2mb' }))
 app.use(express.urlencoded({ extended: true, limit: '2mb' }))
 
-// ── WAF Dashboard API (bypass WAF for these routes) ──────────────────────────
-app.use('/api', apiRouter)
-
-// ── WAF Middleware (applied to all proxied traffic) ───────────────────────────
+// ── WAF Middleware (applied to ALL traffic including /api) ────────────────────
+// Note: /api routes are protected by API key auth. WAF runs first to catch
+// any attack payloads embedded in management requests too.
 app.use(wafMiddleware)
+
+// ── WAF Dashboard API ─────────────────────────────────────────────────────────
+app.use('/api', apiRouter)
 
 // ── Reverse Proxy to Target App ───────────────────────────────────────────────
 if (TARGET_URL) {

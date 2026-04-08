@@ -101,19 +101,19 @@ export default function Simulator() {
       // Fire the actual request against the WAF
       let res
       if (attack.id === 'scanner') {
-        res = await axios.get(`http://localhost:4000${attack.url}`, {
+        res = await axios.get(attack.url, {
           headers: { 'User-Agent': attack.payload },
           validateStatus: () => true
         })
       } else if (attack.id === 'honeypot') {
-        res = await axios.get(`http://localhost:4000${attack.url}`, { validateStatus: () => true })
+        res = await axios.get(attack.url, { validateStatus: () => true })
       } else if (attack.paramKey) {
-        res = await axios.get(`http://localhost:4000${attack.url}`, {
+        res = await axios.get(attack.url, {
           params: { [attack.paramKey]: attack.paramVal },
           validateStatus: () => true
         })
       } else {
-        res = await axios.get(`http://localhost:4000${attack.url}`, { validateStatus: () => true })
+        res = await axios.get(attack.url, { validateStatus: () => true })
       }
 
       const blocked = res.status === 403
@@ -153,7 +153,7 @@ export default function Simulator() {
   async function fireCustom() {
     setFiring('custom')
     try {
-      const res = await axios.get(`http://localhost:4000${customUrl}`, {
+      const res = await axios.get(customUrl, {
         params: { payload: customPayload },
         validateStatus: () => true
       })

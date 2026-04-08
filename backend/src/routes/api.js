@@ -8,6 +8,27 @@ const { RULES } = require('../rules/attackPatterns')
 const fs = require('fs')
 const path = require('path')
 
+// ── API Key Auth ─────────────────────────────────────────────────────────────
+// To secure: add API_KEY=your-secret-key to backend/.env
+//            and VITE_API_KEY=your-secret-key to frontend/.env
+const API_KEY = process.env.API_KEY || 'waf-dev-key'
+
+function requireKey(req, res, next) {
+  const key = req.headers['x-api-key']
+  if (!key || key !== API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Valid X-Api-Key header required.' })
+  }
+  next()
+}
+
+// Basic IP format validation (IPv4 / IPv6)
+function isValidIP(ip) {
+  if (!ip || typeof ip !== 'string') return false
+  const ipv4 = /^(\d{1,3}\.){3}\d{1,3}$/
+  const ipv6 = /^[0-9a-fA-F:]+$/
+  return ipv4.test(ip) || ipv6.test(ip)
+}
+
 // GET /api/stats - dashboard statistics
 router.get('/stats', (req, res) => {
   res.json(getStats())
@@ -45,23 +66,25 @@ router.get('/suspicious', (req, res) => {
 })
 
 // POST /api/ban - manually ban an IP
-router.post('/ban', (req, res) => {
+router.post('/ban', requireKey, (req, res) => {
   const { ip, reason, permanent } = req.body
   if (!ip) return res.status(400).json({ error: 'ip required' })
+  if (!isValidIP(ip)) return res.status(400).json({ error: 'Invalid IP address format' })
   ipRep.banIP(ip, reason || 'Manual ban', permanent === true)
   res.json({ ok: true, message: `${ip} banned` })
 })
 
 // DELETE /api/ban/:ip - unban an IP
-router.delete('/ban/:ip', (req, res) => {
+router.delete('/ban/:ip', requireKey, (req, res) => {
   ipRep.unbanIP(req.params.ip)
   res.json({ ok: true, message: `${req.params.ip} unbanned` })
 })
 
 // POST /api/allowlist - add IP to allowlist
-router.post('/allowlist', (req, res) => {
+router.post('/allowlist', requireKey, (req, res) => {
   const { ip } = req.body
   if (!ip) return res.status(400).json({ error: 'ip required' })
+  if (!isValidIP(ip)) return res.status(400).json({ error: 'Invalid IP address format' })
   ipRep.allowIP(ip)
   res.json({ ok: true, message: `${ip} added to allowlist` })
 })
@@ -72,7 +95,7 @@ router.get('/ip/:ip', (req, res) => {
 })
 
 // POST /api/clear - reset all stats (for testing)
-router.post('/clear', (req, res) => {
+router.post('/clear', requireKey, (req, res) => {
   clearStats()
   res.json({ ok: true, message: 'Stats cleared' })
 })
