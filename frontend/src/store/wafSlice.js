@@ -40,6 +40,16 @@ export const unbanIP = createAsyncThunk('waf/unbanIP', async (ip) => {
   return ip
 })
 
+export const fetchSuspicious = createAsyncThunk('waf/fetchSuspicious', async () => {
+  const { data } = await axios.get(`${API}/suspicious`)
+  return data
+})
+
+export const allowlistIP = createAsyncThunk('waf/allowlistIP', async (ip) => {
+  await authAxios.post(`${API}/allowlist`, { ip })
+  return ip
+})
+
 export const simulateAttack = createAsyncThunk('waf/simulate', async (type) => {
   const { data } = await authAxios.post(`${API}/simulate`, { type })
   return data
@@ -52,6 +62,7 @@ const wafSlice = createSlice({
     events: [],
     rules: [],
     banned: [],
+    suspicious: [],
     connected: false,
     loading: false,
     simulationResult: null,
@@ -89,7 +100,12 @@ const wafSlice = createSlice({
       .addCase(fetchEvents.fulfilled, (s, a) => { s.events = a.payload })
       .addCase(fetchRules.fulfilled, (s, a) => { s.rules = a.payload })
       .addCase(fetchBanned.fulfilled, (s, a) => { s.banned = a.payload })
+      .addCase(fetchSuspicious.fulfilled, (s, a) => { s.suspicious = a.payload })
       .addCase(unbanIP.fulfilled, (s, a) => { s.banned = s.banned.filter(b => b.ip !== a.payload) })
+      .addCase(allowlistIP.fulfilled, (s, a) => {
+        s.banned = s.banned.filter(b => b.ip !== a.payload)
+        s.suspicious = s.suspicious.filter(b => b.ip !== a.payload)
+      })
       .addCase(simulateAttack.fulfilled, (s, a) => { s.simulationResult = a.payload })
   }
 })

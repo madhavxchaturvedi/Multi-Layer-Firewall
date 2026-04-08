@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { fetchStats, fetchEvents, fetchRules, fetchBanned } from './store/wafSlice'
 import { useSocket } from './hooks/useSocket'
 import Sidebar from './components/Sidebar'
+import ErrorBoundary from './components/ErrorBoundary'
 import Dashboard from './pages/Dashboard'
 import LiveFeed from './pages/LiveFeed'
 import Rules from './pages/Rules'
@@ -31,20 +32,21 @@ export default function App() {
   }, [dispatch])
 
   const pages = {
-    dashboard: <Dashboard />,
-    livefeed: <LiveFeed />,
-    rules: <Rules />,
-    ips: <IPManager />,
-    simulator: <Simulator />,
-    logs: <AuditLogs />
+    dashboard: <ErrorBoundary title="Dashboard Error"><Dashboard /></ErrorBoundary>,
+    livefeed:  <ErrorBoundary title="Live Feed Error"><LiveFeed /></ErrorBoundary>,
+    rules:     <ErrorBoundary title="Rules Error"><Rules /></ErrorBoundary>,
+    ips:       <ErrorBoundary title="IP Manager Error"><IPManager /></ErrorBoundary>,
+    simulator: <ErrorBoundary title="Simulator Error"><Simulator /></ErrorBoundary>,
+    logs:      <ErrorBoundary title="Audit Logs Error"><AuditLogs /></ErrorBoundary>,
   }
 
   return (
     <div className="flex min-h-screen bg-surface text-white">
       <Sidebar />
       <main className="flex-1 overflow-auto">
-        {pages[activeTab] || <Dashboard />}
+        {pages[activeTab] || <ErrorBoundary title="Dashboard Error"><Dashboard /></ErrorBoundary>}
       </main>
     </div>
   )
 }
+

@@ -20,7 +20,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 export default function Dashboard() {
-  const { stats, events } = useSelector(s => s.waf)
+  const { stats, events, rules } = useSelector(s => s.waf)
 
   // Build hourly chart data
   const hourlyData = (stats?.attacksByHour || Array(24).fill(0)).map((v, i) => ({
@@ -50,7 +50,7 @@ export default function Dashboard() {
         <StatCard label="Total Requests" value={stats?.totalRequests?.toLocaleString() || 0} color="blue" sub="since startup" />
         <StatCard label="Blocked" value={stats?.totalBlocked?.toLocaleString() || 0} color="red" sub="attacks stopped" />
         <StatCard label="Block Rate" value={`${stats?.blockRate || 0}%`} color="yellow" sub="of all traffic" />
-        <StatCard label="Rules Loaded" value={stats ? Object.values(stats.attacksByCategory || {}).length || '—' : '—'} color="green" sub="active patterns" />
+        <StatCard label="Rules Loaded" value={rules.length || '—'} color="green" sub="active patterns" />
       </div>
 
       {/* Charts row */}
