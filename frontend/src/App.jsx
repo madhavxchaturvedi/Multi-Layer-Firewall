@@ -1,52 +1,60 @@
 // App.jsx
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchStats, fetchEvents, fetchRules, fetchBanned } from './store/wafSlice'
+import { fetchStats, fetchEvents, fetchRules, fetchBanned, fetchSuspicious, fetchWebhooks } from './store/wafSlice'
 import { useSocket } from './hooks/useSocket'
 import Sidebar from './components/Sidebar'
-import ErrorBoundary from './components/ErrorBoundary'
 import Dashboard from './pages/Dashboard'
 import LiveFeed from './pages/LiveFeed'
+import WorldMap from './pages/WorldMap'
+import ThreatTimeline from './pages/ThreatTimeline'
 import Rules from './pages/Rules'
 import IPManager from './pages/IPManager'
+import Webhooks from './pages/Webhooks'
 import Simulator from './pages/Simulator'
 import AuditLogs from './pages/AuditLogs'
+
+const PAGES = {
+  dashboard: Dashboard,
+  livefeed: LiveFeed,
+  worldmap: WorldMap,
+  timeline: ThreatTimeline,
+  rules: Rules,
+  ips: IPManager,
+  webhooks: Webhooks,
+  simulator: Simulator,
+  logs: AuditLogs
+}
 
 export default function App() {
   const dispatch = useDispatch()
   const { activeTab } = useSelector(s => s.waf)
 
-  // Connect to real-time socket
   useSocket()
 
-  // Fetch initial data
   useEffect(() => {
     dispatch(fetchStats())
     dispatch(fetchEvents())
     dispatch(fetchRules())
     dispatch(fetchBanned())
+    dispatch(fetchSuspicious())
+    dispatch(fetchWebhooks())
 
-    // Refresh stats every 10s
-    const interval = setInterval(() => dispatch(fetchStats()), 10000)
+    const interval = setInterval(() => {
+      dispatch(fetchStats())
+      dispatch(fetchSuspicious())
+    }, 10000)
     return () => clearInterval(interval)
   }, [dispatch])
 
-  const pages = {
-    dashboard: <ErrorBoundary title="Dashboard Error"><Dashboard /></ErrorBoundary>,
-    livefeed:  <ErrorBoundary title="Live Feed Error"><LiveFeed /></ErrorBoundary>,
-    rules:     <ErrorBoundary title="Rules Error"><Rules /></ErrorBoundary>,
-    ips:       <ErrorBoundary title="IP Manager Error"><IPManager /></ErrorBoundary>,
-    simulator: <ErrorBoundary title="Simulator Error"><Simulator /></ErrorBoundary>,
-    logs:      <ErrorBoundary title="Audit Logs Error"><AuditLogs /></ErrorBoundary>,
-  }
+  const Page = PAGES[activeTab] || Dashboard
 
   return (
     <div className="flex min-h-screen bg-surface text-white">
       <Sidebar />
       <main className="flex-1 overflow-auto">
-        {pages[activeTab] || <ErrorBoundary title="Dashboard Error"><Dashboard /></ErrorBoundary>}
+        <Page />
       </main>
     </div>
   )
 }
-

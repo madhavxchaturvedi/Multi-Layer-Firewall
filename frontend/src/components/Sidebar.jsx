@@ -6,8 +6,11 @@ import { cn } from '../lib/utils'
 const NAV = [
   { id: 'dashboard', icon: '⬡', label: 'Dashboard' },
   { id: 'livefeed', icon: '◉', label: 'Live Feed' },
+  { id: 'worldmap', icon: '◈', label: 'World Map' },
+  { id: 'timeline', icon: '⊛', label: 'Threat Timeline' },
   { id: 'rules', icon: '⊞', label: 'Rule Engine' },
   { id: 'ips', icon: '⊘', label: 'IP Manager' },
+  { id: 'webhooks', icon: '⚇', label: 'Webhooks' },
   { id: 'simulator', icon: '⚡', label: 'Simulator' },
   { id: 'logs', icon: '≡', label: 'Audit Logs' }
 ]
@@ -43,7 +46,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-3 px-2">
+      <nav className="flex-1 py-3 px-2 overflow-y-auto">
         {NAV.map(item => (
           <button
             key={item.id}
@@ -55,16 +58,33 @@ export default function Sidebar() {
                 : 'text-gray-500 hover:text-gray-300 hover:bg-surface-2'
             )}
           >
-            <span className="text-base leading-none">{item.icon}</span>
+            <span className="text-base leading-none flex-shrink-0">{item.icon}</span>
             <span className="font-medium">{item.label}</span>
             {item.id === 'livefeed' && stats?.totalBlocked > 0 && (
               <span className="ml-auto text-[10px] bg-accent-red text-white font-mono px-1.5 py-0.5 rounded-full">
                 {stats.totalBlocked}
               </span>
             )}
+            {item.id === 'worldmap' && stats?.totalBlocked > 0 && (
+              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse" />
+            )}
           </button>
         ))}
       </nav>
+
+      {/* Stats mini */}
+      {stats && (
+        <div className="px-5 py-3 border-t border-border grid grid-cols-2 gap-2">
+          <div>
+            <div className="text-[9px] font-mono text-gray-600 uppercase tracking-widest">Blocked</div>
+            <div className="text-xs font-mono text-accent-red font-bold">{stats.totalBlocked || 0}</div>
+          </div>
+          <div>
+            <div className="text-[9px] font-mono text-gray-600 uppercase tracking-widest">Rate</div>
+            <div className="text-xs font-mono text-accent-yellow font-bold">{stats.blockRate || 0}%</div>
+          </div>
+        </div>
+      )}
 
       {/* Mode badge */}
       <div className="px-5 py-4 border-t border-border">

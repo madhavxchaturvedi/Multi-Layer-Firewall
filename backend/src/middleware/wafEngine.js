@@ -7,6 +7,7 @@ const { inspect } = require('../rules/attackPatterns')
 const ipRep = require('../utils/ipReputation')
 const { recordEvent } = require('../utils/eventStore')
 const logger = require('../utils/logger')
+const { dispatchAlerts } = require('../utils/webhooks')
 
 // Rate limiter: 60 requests/min per IP (configurable via env)
 const rateLimiter = new RateLimiterMemory({
@@ -67,6 +68,7 @@ function block(res, event) {
   const stored = recordEvent(event)
   emit('waf:event', stored)
   logger.warn('BLOCKED', { ...event })
+  dispatchAlerts(stored).catch(() => {})
 
   if (WAF_MODE === 'detect') {
     return false // Don't actually block in detect mode

@@ -2,8 +2,8 @@
 import { useSelector } from 'react-redux'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts'
 import StatCard from '../components/StatCard'
-import { CATEGORY_LABEL, CATEGORY_COLOR, formatTime } from '../lib/utils'
-import { CategoryBadge, BlockedBadge, SeverityDot } from '../components/EventBadge'
+import { CATEGORY_LABEL, formatTime } from '../lib/utils'
+import { CategoryBadge, SeverityDot } from '../components/EventBadge'
 
 const COLORS = ['#ff3b3b', '#ff7b29', '#f5c518', '#a855f7', '#06b6d4', '#3b82f6', '#00d68f']
 
@@ -12,9 +12,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return (
     <div className="bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs font-mono">
       <div className="text-gray-400 mb-1">{label}</div>
-      {payload.map((p, i) => (
-        <div key={i} style={{ color: p.color }}>{p.name}: {p.value}</div>
-      ))}
+      {payload.map((p, i) => <div key={i} style={{ color: p.color }}>{p.name}: {p.value}</div>)}
     </div>
   )
 }
@@ -22,30 +20,27 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function Dashboard() {
   const { stats, events, rules } = useSelector(s => s.waf)
 
-  // Build hourly chart data
   const hourlyData = (stats?.attacksByHour || Array(24).fill(0)).map((v, i) => ({
     hour: `${String(i).padStart(2, '0')}:00`, attacks: v
   }))
 
-  // Category pie data
   const catData = Object.entries(stats?.attacksByCategory || {})
     .map(([name, value]) => ({ name: CATEGORY_LABEL[name] || name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 7)
+    .sort((a, b) => b.value - a.value).slice(0, 7)
 
-  // Recent blocked events
   const recentBlocked = events.filter(e => e.blocked).slice(0, 8)
 
-  // Recent traffic for area chart
   const trafficSample = events.slice(0, 30).reverse().map((e, i) => ({
-    i,
-    blocked: e.blocked ? 1 : 0,
-    allowed: e.blocked ? 0 : 1
+    i, blocked: e.blocked ? 1 : 0, allowed: e.blocked ? 0 : 1
   }))
+
+  // Top countries
+  const topCountries = Object.entries(stats?.attacksByCountry || {})
+    .sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
-      {/* Stat row */}
+      {/* Stat row — fixed: uses actual rules.length */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Requests" value={stats?.totalRequests?.toLocaleString() || 0} color="blue" sub="since startup" />
         <StatCard label="Blocked" value={stats?.totalBlocked?.toLocaleString() || 0} color="red" sub="attacks stopped" />
@@ -55,7 +50,6 @@ export default function Dashboard() {
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Hourly attacks bar chart */}
         <div className="lg:col-span-2 bg-surface-1 border border-border rounded-xl p-5">
           <div className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">Attacks by Hour (Today)</div>
           <ResponsiveContainer width="100%" height={180}>
@@ -68,7 +62,6 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Category pie */}
         <div className="bg-surface-1 border border-border rounded-xl p-5">
           <div className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">Attack Categories</div>
           {catData.length > 0 ? (
@@ -99,26 +92,52 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Traffic area chart */}
-      <div className="bg-surface-1 border border-border rounded-xl p-5">
-        <div className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">Recent Traffic (last 30 requests)</div>
-        <ResponsiveContainer width="100%" height={100}>
-          <AreaChart data={trafficSample}>
-            <defs>
-              <linearGradient id="gBlocked" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ff3b3b" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#ff3b3b" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gAllowed" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#00d68f" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#00d68f" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <Area type="monotone" dataKey="blocked" stroke="#ff3b3b" strokeWidth={1.5} fill="url(#gBlocked)" />
-            <Area type="monotone" dataKey="allowed" stroke="#00d68f" strokeWidth={1.5} fill="url(#gAllowed)" />
-            <Tooltip content={<CustomTooltip />} />
-          </AreaChart>
-        </ResponsiveContainer>
+      {/* Bottom row: traffic + top countries */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 bg-surface-1 border border-border rounded-xl p-5">
+          <div className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">Recent Traffic (last 30 requests)</div>
+          <ResponsiveContainer width="100%" height={100}>
+            <AreaChart data={trafficSample}>
+              <defs>
+                <linearGradient id="gBlocked" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ff3b3b" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#ff3b3b" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gAllowed" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#00d68f" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#00d68f" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <Area type="monotone" dataKey="blocked" stroke="#ff3b3b" strokeWidth={1.5} fill="url(#gBlocked)" />
+              <Area type="monotone" dataKey="allowed" stroke="#00d68f" strokeWidth={1.5} fill="url(#gAllowed)" />
+              <Tooltip content={<CustomTooltip />} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Top countries */}
+        <div className="bg-surface-1 border border-border rounded-xl p-5">
+          <div className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">Top Attacking Countries</div>
+          {topCountries.length === 0 ? (
+            <div className="flex items-center justify-center h-24 text-gray-600 text-xs font-mono">No data yet</div>
+          ) : (
+            <div className="space-y-2.5">
+              {topCountries.map(([cc, count], i) => {
+                const max = topCountries[0][1]
+                return (
+                  <div key={cc} className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-gray-500 w-6">{i+1}</span>
+                    <span className="font-mono text-gray-300 text-xs w-8">{cc}</span>
+                    <div className="flex-1 bg-surface-3 rounded-full h-1.5 overflow-hidden">
+                      <div className="h-full bg-accent-red rounded-full" style={{ width: `${(count/max)*100}%` }} />
+                    </div>
+                    <span className="font-mono text-gray-500 text-xs w-6 text-right">{count}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Recent blocked table */}

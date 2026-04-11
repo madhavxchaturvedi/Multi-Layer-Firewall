@@ -36,22 +36,10 @@ export default {
         'blink': 'blink 1s step-end infinite'
       },
       keyframes: {
-        'pulse-red': {
-          '0%, 100%': { opacity: 1 },
-          '50%': { opacity: 0.4 }
-        },
-        slideIn: {
-          from: { opacity: 0, transform: 'translateY(-8px)' },
-          to: { opacity: 1, transform: 'translateY(0)' }
-        },
-        fadeIn: {
-          from: { opacity: 0 },
-          to: { opacity: 1 }
-        },
-        blink: {
-          '0%, 100%': { opacity: 1 },
-          '50%': { opacity: 0 }
-        }
+        'pulse-red': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.4 } },
+        slideIn: { from: { opacity: 0, transform: 'translateY(-8px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+        fadeIn: { from: { opacity: 0 }, to: { opacity: 1 } },
+        blink: { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0 } }
       }
     }
   },
