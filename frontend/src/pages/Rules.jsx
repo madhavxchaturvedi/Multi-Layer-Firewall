@@ -1,127 +1,529 @@
-// pages/Rules.jsx
-import { useSelector, useDispatch } from 'react-redux'
-import { useState } from 'react'
-import { SEVERITY_COLOR, cn } from '../lib/utils'
-import { toggleRule, addCustomRule } from '../store/wafSlice'
+// pages/Rules.jsx — Vantix Design System
+import { useSelector, useDispatch } from "react-redux";
+import { useState } from "react";
+import { useTheme } from "../components/ThemeProvider";
+import { toggleRule, addCustomRule } from "../store/wafSlice";
+import { C, F, card, SEV_COLORS } from "../lib/ds";
 
-const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3 }
-const TARGETS = ['url', 'query', 'body', 'headers']
+const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+const TARGETS = ["url", "query", "body", "headers"];
+
+function SevBadge({ sev }) {
+  const col = SEV_COLORS[sev] || SEV_COLORS.low;
+  return (
+    <span
+      style={{
+        fontFamily: F.mono,
+        fontSize: "8px",
+        fontWeight: 700,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        padding: "2px 7px",
+        borderRadius: "3px",
+        background: col.bg,
+        color: col.text,
+      }}
+    >
+      {sev}
+    </span>
+  );
+}
+
+function Toggle({ on, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        position: "relative",
+        width: "34px",
+        height: "18px",
+        borderRadius: "9px",
+        border: "none",
+        cursor: "pointer",
+        transition: "background 0.2s",
+        background: on ? "rgba(196,18,48,0.4)" : "rgba(255,255,255,0.08)",
+        flexShrink: 0,
+        padding: 0,
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          top: "2px",
+          width: "14px",
+          height: "14px",
+          borderRadius: "50%",
+          background: on ? C.crim : "#52525e",
+          transition: "all 0.2s",
+          left: on ? "18px" : "2px",
+        }}
+      />
+    </button>
+  );
+}
 
 export default function Rules() {
-  const dispatch = useDispatch()
-  const { rules, disabledRules, stats } = useSelector(s => s.waf)
-  const [filterCat, setFilterCat] = useState('all')
-  const [filterSev, setFilterSev] = useState('all')
-  const [showBuilder, setShowBuilder] = useState(false)
-  const [newRule, setNewRule] = useState({ name: '', category: 'custom', severity: 'medium', pattern: '', description: '', targets: ['query', 'body'] })
-  const [builderMsg, setBuilderMsg] = useState(null)
+  const dispatch = useDispatch();
+  const { rules, disabledRules, stats } = useSelector((s) => s.waf);
+  const { theme } = useTheme();
+  const light = theme === "light";
 
-  const categories = [...new Set(rules.map(r => r.category))]
+  const [filterCat, setFilterCat] = useState("all");
+  const [filterSev, setFilterSev] = useState("all");
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [newRule, setNewRule] = useState({
+    name: "",
+    category: "custom",
+    severity: "medium",
+    pattern: "",
+    description: "",
+    targets: ["query", "body"],
+  });
+  const [builderMsg, setBuilderMsg] = useState(null);
+
+  const tp = light ? C.lTextPri : C.textPri;
+  const ts = light ? C.lTextSec : C.textSec;
+  const tm = light ? C.lTextMut : C.textMut;
+  const bdr = light ? C.lBdr : C.bdr;
+  const bg1 = light ? C.lSurface : C.s1;
+  const bg2 = light ? C.lS2 : C.s2;
+
+  const categories = [...new Set(rules.map((r) => r.category))];
+  const hitMap = stats?.attacksByCategory || {};
+  const enabledCount = rules.filter(
+    (r) => !disabledRules?.includes(r.id),
+  ).length;
+
   const filtered = rules
-    .filter(r => filterCat === 'all' || r.category === filterCat)
-    .filter(r => filterSev === 'all' || r.severity === filterSev)
-    .sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9))
-
-  const hitMap = stats?.attacksByCategory || {}
-  const enabledCount = rules.filter(r => !disabledRules?.includes(r.id)).length
-
-  function handleToggle(ruleId) { dispatch(toggleRule(ruleId)) }
+    .filter((r) => filterCat === "all" || r.category === filterCat)
+    .filter((r) => filterSev === "all" || r.severity === filterSev)
+    .sort(
+      (a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9),
+    );
 
   function handleAddRule(e) {
-    e.preventDefault()
-    if (!newRule.name || !newRule.pattern) { setBuilderMsg({ type: 'error', text: 'Name and pattern are required' }); return }
-    try { new RegExp(newRule.pattern) } catch { setBuilderMsg({ type: 'error', text: 'Invalid regex pattern' }); return }
-    dispatch(addCustomRule({ ...newRule, id: 'CUSTOM-' + Date.now(), isCustom: true }))
-    setBuilderMsg({ type: 'success', text: `Rule "${newRule.name}" added` })
-    setNewRule({ name: '', category: 'custom', severity: 'medium', pattern: '', description: '', targets: ['query', 'body'] })
-    setTimeout(() => setBuilderMsg(null), 3000)
+    e.preventDefault();
+    if (!newRule.name || !newRule.pattern) {
+      setBuilderMsg({ type: "error", text: "Name and pattern are required" });
+      return;
+    }
+    try {
+      new RegExp(newRule.pattern);
+    } catch {
+      setBuilderMsg({ type: "error", text: "Invalid regex pattern" });
+      return;
+    }
+    dispatch(
+      addCustomRule({ ...newRule, id: "CUSTOM-" + Date.now(), isCustom: true }),
+    );
+    setBuilderMsg({ type: "success", text: `Rule "${newRule.name}" added` });
+    setNewRule({
+      name: "",
+      category: "custom",
+      severity: "medium",
+      pattern: "",
+      description: "",
+      targets: ["query", "body"],
+    });
+    setTimeout(() => setBuilderMsg(null), 3000);
   }
 
   function toggleTarget(t) {
-    setNewRule(r => ({
-      ...r, targets: r.targets.includes(t) ? r.targets.filter(x => x !== t) : [...r.targets, t]
-    }))
+    setNewRule((r) => ({
+      ...r,
+      targets: r.targets.includes(t)
+        ? r.targets.filter((x) => x !== t)
+        : [...r.targets, t],
+    }));
   }
 
+  const pillBtn = (active) => ({
+    padding: "4px 12px",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+    fontFamily: F.mono,
+    fontSize: "9px",
+    textTransform: "uppercase",
+    letterSpacing: "0.1em",
+    transition: "all 0.15s",
+    background: active ? "rgba(196,18,48,0.15)" : "transparent",
+    color: active ? C.crim : tm,
+    fontWeight: active ? 600 : 400,
+  });
+
+  const inputStyle = {
+    width: "100%",
+    background: bg2,
+    border: `1px solid ${bdr}`,
+    borderRadius: "6px",
+    padding: "8px 12px",
+    fontFamily: F.mono,
+    fontSize: "11px",
+    color: tp,
+    outline: "none",
+  };
+
   return (
-    <div className="p-6 animate-fade-in space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div
+      style={{
+        padding: "24px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: "16px",
+          flexWrap: "wrap",
+        }}
+      >
         <div>
-          <div className="font-display font-semibold text-white text-lg">Rule Engine</div>
-          <div className="text-xs font-mono text-gray-500 mt-0.5">{enabledCount} of {rules.length} rules active — OWASP Top 10 coverage</div>
+          <div
+            style={{
+              fontFamily: F.mono,
+              fontSize: "9px",
+              color: C.crim,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              marginBottom: "6px",
+            }}
+          >
+            // Rule Engine
+          </div>
+          <div
+            style={{
+              fontFamily: F.display,
+              fontSize: "24px",
+              fontWeight: 700,
+              color: tp,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Detection Rules
+          </div>
+          <div
+            style={{
+              fontFamily: F.mono,
+              fontSize: "11px",
+              color: tm,
+              marginTop: "4px",
+            }}
+          >
+            {enabledCount} of {rules.length} rules active · OWASP Top 10
+            coverage
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="text-xs font-mono text-gray-600 bg-surface-1 border border-border px-3 py-1.5 rounded-lg">
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: F.mono,
+              fontSize: "10px",
+              color: tm,
+              background: bg1,
+              border: `1px solid ${bdr}`,
+              padding: "6px 14px",
+              borderRadius: "6px",
+            }}
+          >
             {Object.values(hitMap).reduce((a, b) => a + b, 0)} total hits
           </div>
-          <button onClick={() => setShowBuilder(b => !b)}
-            className={cn('px-3 py-1.5 text-xs font-mono rounded-lg border transition-colors',
-              showBuilder ? 'bg-accent-purple/20 text-accent-purple border-accent-purple/30' : 'bg-surface-1 text-gray-400 border-border hover:text-gray-200'
-            )}>
-            {showBuilder ? '× Close Builder' : '+ Custom Rule'}
+          <button
+            onClick={() => setShowBuilder((b) => !b)}
+            style={{
+              padding: "7px 16px",
+              borderRadius: "6px",
+              border: `1px solid ${showBuilder ? "rgba(124,58,237,0.4)" : bdr}`,
+              background: showBuilder ? "rgba(124,58,237,0.12)" : "transparent",
+              color: showBuilder ? C.purpleL : ts,
+              fontFamily: F.mono,
+              fontSize: "11px",
+              cursor: "pointer",
+              transition: "all 0.18s",
+            }}
+          >
+            {showBuilder ? "× Close Builder" : "+ Custom Rule"}
           </button>
         </div>
       </div>
 
       {/* Custom rule builder */}
       {showBuilder && (
-        <div className="bg-surface-1 border border-accent-purple/20 rounded-xl p-5 animate-slide-in space-y-4">
-          <div className="text-xs font-mono text-accent-purple uppercase tracking-widest">Custom Rule Builder</div>
+        <div
+          style={{
+            ...card(light),
+            padding: "20px",
+            border: `1px solid rgba(124,58,237,0.3)`,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: F.mono,
+              fontSize: "9px",
+              color: C.purpleL,
+              textTransform: "uppercase",
+              letterSpacing: "0.16em",
+              marginBottom: "16px",
+            }}
+          >
+            // Custom Rule Builder
+          </div>
           {builderMsg && (
-            <div className={cn('px-3 py-2 rounded text-xs font-mono border',
-              builderMsg.type === 'success' ? 'bg-accent-green/10 text-accent-green border-accent-green/20' : 'bg-accent-red/10 text-accent-red border-accent-red/20'
-            )}>{builderMsg.text}</div>
+            <div
+              style={{
+                padding: "8px 12px",
+                borderRadius: "5px",
+                fontFamily: F.mono,
+                fontSize: "11px",
+                marginBottom: "12px",
+                background:
+                  builderMsg.type === "success"
+                    ? "rgba(22,163,74,0.1)"
+                    : "rgba(196,18,48,0.1)",
+                color: builderMsg.type === "success" ? C.greenL : "#e55a73",
+                border: `1px solid ${builderMsg.type === "success" ? "rgba(22,163,74,0.25)" : "rgba(196,18,48,0.25)"}`,
+              }}
+            >
+              {builderMsg.text}
+            </div>
           )}
-          <form onSubmit={handleAddRule} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <form
+            onSubmit={handleAddRule}
+            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+          >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px",
+              }}
+            >
               <div>
-                <label className="text-[10px] font-mono text-gray-600 block mb-1">Rule Name *</label>
-                <input value={newRule.name} onChange={e => setNewRule(r => ({ ...r, name: e.target.value }))} placeholder="My custom rule"
-                  className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs font-mono text-gray-300 placeholder-gray-700 outline-none focus:border-accent-purple/40" />
+                <div
+                  style={{
+                    fontFamily: F.mono,
+                    fontSize: "9px",
+                    color: tm,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Rule Name *
+                </div>
+                <input
+                  value={newRule.name}
+                  onChange={(e) =>
+                    setNewRule((r) => ({ ...r, name: e.target.value }))
+                  }
+                  placeholder="My custom rule"
+                  style={inputStyle}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = "rgba(124,58,237,0.5)")
+                  }
+                  onBlur={(e) => (e.target.style.borderColor = bdr)}
+                />
               </div>
               <div>
-                <label className="text-[10px] font-mono text-gray-600 block mb-1">Category</label>
-                <input value={newRule.category} onChange={e => setNewRule(r => ({ ...r, category: e.target.value }))} placeholder="custom"
-                  className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs font-mono text-gray-300 placeholder-gray-700 outline-none focus:border-accent-purple/40" />
+                <div
+                  style={{
+                    fontFamily: F.mono,
+                    fontSize: "9px",
+                    color: tm,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Category
+                </div>
+                <input
+                  value={newRule.category}
+                  onChange={(e) =>
+                    setNewRule((r) => ({ ...r, category: e.target.value }))
+                  }
+                  placeholder="custom"
+                  style={inputStyle}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = "rgba(124,58,237,0.5)")
+                  }
+                  onBlur={(e) => (e.target.style.borderColor = bdr)}
+                />
               </div>
             </div>
             <div>
-              <label className="text-[10px] font-mono text-gray-600 block mb-1">Regex Pattern *</label>
-              <input value={newRule.pattern} onChange={e => setNewRule(r => ({ ...r, pattern: e.target.value }))} placeholder="e.g. (eval\s*\(|base64_decode)"
-                className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs font-mono text-gray-300 placeholder-gray-700 outline-none focus:border-accent-purple/40 font-mono" />
+              <div
+                style={{
+                  fontFamily: F.mono,
+                  fontSize: "9px",
+                  color: tm,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                  marginBottom: "5px",
+                }}
+              >
+                Regex Pattern *
+              </div>
+              <input
+                value={newRule.pattern}
+                onChange={(e) =>
+                  setNewRule((r) => ({ ...r, pattern: e.target.value }))
+                }
+                placeholder="e.g. (eval\s*\(|base64_decode)"
+                style={{ ...inputStyle, fontFamily: F.mono }}
+                onFocus={(e) =>
+                  (e.target.style.borderColor = "rgba(124,58,237,0.5)")
+                }
+                onBlur={(e) => (e.target.style.borderColor = bdr)}
+              />
             </div>
             <div>
-              <label className="text-[10px] font-mono text-gray-600 block mb-1">Description</label>
-              <input value={newRule.description} onChange={e => setNewRule(r => ({ ...r, description: e.target.value }))} placeholder="What does this rule detect?"
-                className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs font-mono text-gray-300 placeholder-gray-700 outline-none focus:border-accent-purple/40" />
+              <div
+                style={{
+                  fontFamily: F.mono,
+                  fontSize: "9px",
+                  color: tm,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                  marginBottom: "5px",
+                }}
+              >
+                Description
+              </div>
+              <input
+                value={newRule.description}
+                onChange={(e) =>
+                  setNewRule((r) => ({ ...r, description: e.target.value }))
+                }
+                placeholder="What does this rule detect?"
+                style={inputStyle}
+                onFocus={(e) =>
+                  (e.target.style.borderColor = "rgba(124,58,237,0.5)")
+                }
+                onBlur={(e) => (e.target.style.borderColor = bdr)}
+              />
             </div>
-            <div className="flex flex-wrap gap-4">
+            <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
               <div>
-                <label className="text-[10px] font-mono text-gray-600 block mb-1">Severity</label>
-                <div className="flex gap-1">
-                  {['low','medium','high','critical'].map(s => (
-                    <button key={s} type="button" onClick={() => setNewRule(r => ({ ...r, severity: s }))}
-                      className={cn('px-2 py-1 rounded text-[10px] font-mono uppercase border transition-colors',
-                        newRule.severity === s ? SEVERITY_COLOR[s] : 'text-gray-600 border-border hover:text-gray-400'
-                      )}>{s}</button>
-                  ))}
+                <div
+                  style={{
+                    fontFamily: F.mono,
+                    fontSize: "9px",
+                    color: tm,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    marginBottom: "6px",
+                  }}
+                >
+                  Severity
+                </div>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  {["low", "medium", "high", "critical"].map((s) => {
+                    const col = SEV_COLORS[s];
+                    const active = newRule.severity === s;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() =>
+                          setNewRule((r) => ({ ...r, severity: s }))
+                        }
+                        style={{
+                          padding: "4px 12px",
+                          borderRadius: "5px",
+                          border: `1px solid ${active ? col.dot + "55" : "transparent"}`,
+                          background: active ? col.bg : "transparent",
+                          color: active ? col.text : tm,
+                          fontFamily: F.mono,
+                          fontSize: "9px",
+                          textTransform: "uppercase",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        {s}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-mono text-gray-600 block mb-1">Inspect Targets</label>
-                <div className="flex gap-1">
-                  {TARGETS.map(t => (
-                    <button key={t} type="button" onClick={() => toggleTarget(t)}
-                      className={cn('px-2 py-1 rounded text-[10px] font-mono border transition-colors',
-                        newRule.targets.includes(t) ? 'bg-accent-purple/20 text-accent-purple border-accent-purple/30' : 'text-gray-600 border-border hover:text-gray-400'
-                      )}>{t}</button>
-                  ))}
+                <div
+                  style={{
+                    fontFamily: F.mono,
+                    fontSize: "9px",
+                    color: tm,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    marginBottom: "6px",
+                  }}
+                >
+                  Inspect Targets
+                </div>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  {TARGETS.map((t) => {
+                    const active = newRule.targets.includes(t);
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => toggleTarget(t)}
+                        style={{
+                          padding: "4px 12px",
+                          borderRadius: "5px",
+                          border: `1px solid ${active ? "rgba(124,58,237,0.4)" : "transparent"}`,
+                          background: active
+                            ? "rgba(124,58,237,0.12)"
+                            : "transparent",
+                          color: active ? C.purpleL : tm,
+                          fontFamily: F.mono,
+                          fontSize: "9px",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
-            <div className="flex justify-end">
-              <button type="submit" className="px-4 py-2 bg-accent-purple/20 hover:bg-accent-purple/30 border border-accent-purple/30 text-accent-purple text-xs font-mono rounded-lg transition-colors">
-                Add Rule
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="submit"
+                style={{
+                  padding: "8px 22px",
+                  borderRadius: "6px",
+                  border: `1px solid rgba(124,58,237,0.4)`,
+                  background: "rgba(124,58,237,0.15)",
+                  color: C.purpleL,
+                  fontFamily: F.mono,
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.18s",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "rgba(124,58,237,0.25)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "rgba(124,58,237,0.15)")
+                }
+              >
+                Add Rule →
               </button>
             </div>
           </form>
@@ -129,21 +531,44 @@ export default function Rules() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        <div className="flex items-center gap-1 bg-surface-1 border border-border rounded-lg p-1 flex-wrap">
-          {['all', ...categories].map(c => (
-            <button key={c} onClick={() => setFilterCat(c)}
-              className={cn('px-2.5 py-1 rounded text-[10px] font-mono uppercase tracking-wide transition-colors',
-                filterCat === c ? 'bg-accent-red/20 text-accent-red' : 'text-gray-500 hover:text-gray-300')}>
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            background: bg1,
+            border: `1px solid ${bdr}`,
+            borderRadius: "7px",
+            padding: "3px",
+            gap: "2px",
+            flexWrap: "wrap",
+          }}
+        >
+          {["all", ...categories].map((c) => (
+            <button
+              key={c}
+              onClick={() => setFilterCat(c)}
+              style={pillBtn(filterCat === c)}
+            >
               {c}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-1 bg-surface-1 border border-border rounded-lg p-1">
-          {['all','critical','high','medium','low'].map(s => (
-            <button key={s} onClick={() => setFilterSev(s)}
-              className={cn('px-2.5 py-1 rounded text-[10px] font-mono uppercase tracking-wide transition-colors',
-                filterSev === s ? 'bg-accent-red/20 text-accent-red' : 'text-gray-500 hover:text-gray-300')}>
+        <div
+          style={{
+            display: "flex",
+            background: bg1,
+            border: `1px solid ${bdr}`,
+            borderRadius: "7px",
+            padding: "3px",
+            gap: "2px",
+          }}
+        >
+          {["all", "critical", "high", "medium", "low"].map((s) => (
+            <button
+              key={s}
+              onClick={() => setFilterSev(s)}
+              style={pillBtn(filterSev === s)}
+            >
               {s}
             </button>
           ))}
@@ -151,48 +576,175 @@ export default function Rules() {
       </div>
 
       {/* Rules grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {filtered.map(rule => {
-          const hits = hitMap[rule.category] || 0
-          const isDisabled = disabledRules?.includes(rule.id)
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill,minmax(340px,1fr))",
+          gap: "1px",
+          background: bdr,
+        }}
+      >
+        {filtered.map((rule) => {
+          const hits = hitMap[rule.category] || 0;
+          const isDisabled = disabledRules?.includes(rule.id);
           return (
-            <div key={rule.id} className={cn('bg-surface-1 border rounded-xl p-4 transition-colors', isDisabled ? 'border-border opacity-50' : 'border-border hover:border-border-strong')}>
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-mono text-gray-600 bg-surface-3 px-1.5 py-0.5 rounded">{rule.id}</span>
-                  <span className={cn('text-[10px] font-mono uppercase px-1.5 py-0.5 rounded border', SEVERITY_COLOR[rule.severity])}>{rule.severity}</span>
-                  {rule.isCustom && <span className="text-[10px] font-mono text-accent-purple bg-accent-purple/10 border border-accent-purple/20 px-1.5 py-0.5 rounded">CUSTOM</span>}
+            <div
+              key={rule.id}
+              style={{
+                background: bg1,
+                padding: "18px",
+                opacity: isDisabled ? 0.45 : 1,
+                transition: "opacity 0.2s",
+              }}
+            >
+              {/* Top row */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: "8px",
+                  marginBottom: "10px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: F.mono,
+                      fontSize: "8px",
+                      color: tm,
+                      background: light ? C.lS2 : C.s2,
+                      padding: "2px 6px",
+                      borderRadius: "3px",
+                    }}
+                  >
+                    {rule.id}
+                  </span>
+                  <SevBadge sev={rule.severity} />
+                  {rule.isCustom && (
+                    <span
+                      style={{
+                        fontFamily: F.mono,
+                        fontSize: "8px",
+                        color: C.purpleL,
+                        background: "rgba(124,58,237,0.12)",
+                        padding: "2px 6px",
+                        borderRadius: "3px",
+                        border: "1px solid rgba(124,58,237,0.25)",
+                      }}
+                    >
+                      CUSTOM
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {hits > 0 && <span className="text-[10px] font-mono text-accent-red bg-accent-red/10 px-2 py-0.5 rounded-full">{hits} hits</span>}
-                  {/* Toggle switch */}
-                  <button onClick={() => handleToggle(rule.id)}
-                    className={cn('relative w-9 h-5 rounded-full border transition-colors flex-shrink-0',
-                      isDisabled ? 'bg-surface-3 border-border' : 'bg-accent-green/30 border-accent-green/40'
-                    )}>
-                    <span className={cn('absolute top-0.5 w-4 h-4 rounded-full transition-all',
-                      isDisabled ? 'left-0.5 bg-gray-600' : 'left-4 bg-accent-green'
-                    )} />
-                  </button>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    flexShrink: 0,
+                  }}
+                >
+                  {hits > 0 && (
+                    <span
+                      style={{
+                        fontFamily: F.mono,
+                        fontSize: "9px",
+                        color: C.crim,
+                        background: "rgba(196,18,48,0.1)",
+                        padding: "2px 8px",
+                        borderRadius: "100px",
+                      }}
+                    >
+                      {hits} hits
+                    </span>
+                  )}
+                  <Toggle
+                    on={!isDisabled}
+                    onClick={() => dispatch(toggleRule(rule.id))}
+                  />
                 </div>
               </div>
-              <div className={cn('font-sans font-medium text-sm mb-1', isDisabled ? 'text-gray-600' : 'text-white')}>{rule.name}</div>
-              <div className="text-xs text-gray-500 font-sans mb-3">{rule.description}</div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-mono text-gray-600 uppercase">{rule.category}</span>
-                <span className="text-gray-700">·</span>
-                <span className="text-[10px] font-mono text-gray-600">targets: {rule.targets?.join(', ')}</span>
+              {/* Name */}
+              <div
+                style={{
+                  fontFamily: F.display,
+                  fontSize: "15px",
+                  fontWeight: 600,
+                  color: isDisabled ? tm : tp,
+                  letterSpacing: "-0.01em",
+                  marginBottom: "5px",
+                }}
+              >
+                {rule.name}
+              </div>
+              {/* Description */}
+              <div
+                style={{
+                  fontFamily: F.mono,
+                  fontSize: "10px",
+                  color: tm,
+                  lineHeight: 1.7,
+                  marginBottom: "10px",
+                }}
+              >
+                {rule.description}
+              </div>
+              {/* Footer */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <span
+                  style={{ fontFamily: F.mono, fontSize: "9px", color: tm }}
+                >
+                  {rule.category}
+                </span>
+                <span
+                  style={{ color: light ? C.lBdrM : C.bdrM, fontSize: "10px" }}
+                >
+                  ·
+                </span>
+                <span
+                  style={{ fontFamily: F.mono, fontSize: "9px", color: tm }}
+                >
+                  targets: {rule.targets?.join(", ")}
+                </span>
               </div>
             </div>
-          )
+          );
         })}
       </div>
+
       {filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-600">
-          <div className="text-3xl mb-2">⊞</div>
-          <div className="text-sm font-mono">No rules match current filter</div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "60px 20px",
+            gap: "8px",
+            color: tm,
+          }}
+        >
+          <div style={{ fontSize: "28px", opacity: 0.3 }}>⊞</div>
+          <div style={{ fontFamily: F.mono, fontSize: "11px" }}>
+            No rules match current filter
+          </div>
         </div>
       )}
     </div>
-  )
+  );
 }

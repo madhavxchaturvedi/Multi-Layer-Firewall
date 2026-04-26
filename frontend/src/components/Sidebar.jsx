@@ -1,111 +1,257 @@
-// components/Sidebar.jsx
-import { useDispatch, useSelector } from 'react-redux'
-import { setActiveTab, activateDemo, deactivateDemo } from '../store/wafSlice'
-import { useTheme } from './ThemeProvider'
-import { useToast } from './Toast'
-import { generatePDFReport } from '../lib/pdfReport'
-import { cn } from '../lib/utils'
+// Sidebar.jsx — Vantix Design System
+import { useDispatch, useSelector } from "react-redux";
+import { setActiveTab, activateDemo, deactivateDemo } from "../store/wafSlice";
+import { useTheme } from "./ThemeProvider";
+import { useToast } from "./Toast";
+import { generatePDFReport } from "../lib/pdfReport";
+import { C, F } from "../lib/ds";
 
 const NAV = [
-  { id: 'dashboard', icon: '⬡', label: 'Dashboard' },
-  { id: 'livefeed',  icon: '◉', label: 'Live Feed' },
-  { id: 'worldmap',  icon: '◈', label: 'World Map' },
-  { id: 'timeline',  icon: '⊛', label: 'Threat Timeline' },
-  { id: 'rules',     icon: '⊞', label: 'Rule Engine' },
-  { id: 'ips',       icon: '⊘', label: 'IP Manager' },
-  { id: 'webhooks',  icon: '⚇', label: 'Webhooks' },
-  { id: 'simulator', icon: '⚡', label: 'Simulator' },
-  { id: 'logs',      icon: '≡', label: 'Audit Logs' },
-]
+  { id: "dashboard", label: "Dashboard", dot: null },
+  { id: "livefeed", label: "Live Feed", dot: "blocked" },
+  { id: "worldmap", label: "World Map", dot: "blocked" },
+  { id: "timeline", label: "Threat Timeline", dot: null },
+  { id: "rules", label: "Rule Engine", dot: null },
+  { id: "ips", label: "IP Manager", dot: null },
+  { id: "webhooks", label: "Webhooks", dot: null },
+  { id: "simulator", label: "Simulator", dot: null },
+  { id: "logs", label: "Audit Logs", dot: null },
+];
 
 export default function Sidebar() {
-  const dispatch   = useDispatch()
-  const toast      = useToast()
-  const { theme, toggle } = useTheme()
-  const { activeTab, connected, stats, rules, events, demoMode } = useSelector(s => s.waf)
-
-  const isLight = theme === 'light'
+  const dispatch = useDispatch();
+  const toast = useToast();
+  const { theme, toggle } = useTheme();
+  const { activeTab, connected, stats, rules, events, demoMode } = useSelector(
+    (s) => s.waf,
+  );
+  const light = theme === "light";
+  const bg = light ? C.lSurface : C.s1;
+  const bdr = light ? C.lBdr : C.bdr;
+  const tp = light ? C.lTextPri : C.textPri;
+  const ts = light ? C.lTextSec : C.textSec;
+  const tm = light ? C.lTextMut : C.textMut;
 
   function handleDemo() {
     if (demoMode) {
-      dispatch(deactivateDemo())
-      toast.push({ type: 'info', title: 'Demo Off', message: 'Showing live data from backend.' })
+      dispatch(deactivateDemo());
+      toast.push({
+        type: "info",
+        title: "Demo Off",
+        message: "Showing live backend data.",
+      });
     } else {
-      dispatch(activateDemo())
-      toast.push({ type: 'success', title: 'Demo Mode', message: '80 realistic fake attacks loaded. Perfect for presentations!', duration: 6000 })
+      dispatch(activateDemo());
+      toast.push({
+        type: "success",
+        title: "Demo Mode On",
+        message: "80 realistic attacks loaded.",
+        duration: 6000,
+      });
     }
+  }
+  function handlePDF() {
+    if (!stats && !events.length) {
+      toast.push({
+        type: "error",
+        title: "No Data",
+        message: "Enable Demo Mode first.",
+      });
+      return;
+    }
+    toast.push({
+      type: "info",
+      title: "Generating…",
+      message: "Opening PDF in new window.",
+    });
+    setTimeout(() => generatePDFReport(stats, events, rules), 200);
   }
 
-  function handlePDF() {
-    if (!stats && events.length === 0) {
-      toast.push({ type: 'error', title: 'No Data', message: 'Enable Demo Mode or wait for some traffic first.' })
-      return
-    }
-    toast.push({ type: 'info', title: 'Generating Report', message: 'Opening PDF in new window…' })
-    setTimeout(() => generatePDFReport(stats, events, rules), 200)
-  }
+  const s = (id) => ({
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    width: "100%",
+    padding: "8px 10px",
+    borderRadius: "6px",
+    border:
+      activeTab === id
+        ? `1px solid rgba(196,18,48,0.3)`
+        : "1px solid transparent",
+    background: activeTab === id ? "rgba(196,18,48,0.1)" : "transparent",
+    color: activeTab === id ? C.textPri : ts,
+    fontFamily: F.sans,
+    fontSize: "13px",
+    fontWeight: activeTab === id ? 500 : 400,
+    cursor: "pointer",
+    transition: "all 0.18s ease",
+    textAlign: "left",
+  });
+
+  const actionBtn = {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    width: "100%",
+    padding: "7px 10px",
+    borderRadius: "6px",
+    border: `1px solid ${bdr}`,
+    background: "transparent",
+    color: ts,
+    fontFamily: F.mono,
+    fontSize: "11px",
+    cursor: "pointer",
+    transition: "all 0.18s ease",
+  };
 
   return (
-    <aside className={cn(
-      'w-56 flex-shrink-0 flex flex-col h-screen sticky top-0 border-r',
-      isLight
-        ? 'bg-white border-gray-200'
-        : 'bg-surface-1 border-border'
-    )}>
-
+    <aside
+      style={{
+        width: "220px",
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        position: "sticky",
+        top: 0,
+        background: bg,
+        borderRight: `1px solid ${bdr}`,
+      }}
+    >
       {/* Logo */}
-      <div className={cn('px-5 py-5 border-b', isLight ? 'border-gray-100' : 'border-border')}>
-        <div className="flex items-center gap-2.5">
-          <div className={cn('w-7 h-7 rounded flex items-center justify-center',
-            isLight ? 'bg-red-50 border border-red-200' : 'bg-accent-red/20 border border-accent-red/40'
-          )}>
-            <span className="text-accent-red text-sm font-bold font-mono">W</span>
+      <div
+        style={{ padding: "20px 16px 16px", borderBottom: `1px solid ${bdr}` }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {/* Icon mark */}
+          <div
+            style={{
+              width: "30px",
+              height: "30px",
+              background: C.ink,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                width: "12px",
+                height: "12px",
+                border: `2px solid ${C.crim}`,
+                position: "relative",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%,-50%)",
+                  width: "3px",
+                  height: "3px",
+                  background: C.crim,
+                }}
+              />
+            </div>
           </div>
           <div>
-            <div className={cn('font-display font-semibold text-sm tracking-wide', isLight ? 'text-gray-900' : 'text-white')}>
-              WAF Guard
+            <div
+              style={{
+                fontFamily: F.display,
+                fontSize: "16px",
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                color: tp,
+                lineHeight: 1,
+              }}
+            >
+              VANTIX
             </div>
-            <div className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Security Layer</div>
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: "8px",
+                color: tm,
+                letterSpacing: "0.18em",
+                marginTop: "2px",
+              }}
+            >
+              WAF DASHBOARD
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Status bar */}
-      <div className={cn('px-5 py-3 border-b', isLight ? 'border-gray-100' : 'border-border')}>
-        <div className="flex items-center gap-2">
-          <div className={cn('w-2 h-2 rounded-full', connected ? 'bg-accent-green animate-pulse' : 'bg-gray-400')} />
-          <span className={cn('text-xs font-mono', isLight ? 'text-gray-600' : 'text-gray-400')}>
-            {demoMode ? '⚡ Demo' : connected ? 'Live' : 'Offline'}
+      {/* Connection status */}
+      <div
+        style={{ padding: "8px 16px 10px", borderBottom: `1px solid ${bdr}` }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+          <div
+            style={{
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              background: connected ? C.greenL : "#52525e",
+              flexShrink: 0,
+              boxShadow: connected ? `0 0 6px ${C.greenL}` : "none",
+            }}
+          />
+          <span style={{ fontFamily: F.mono, fontSize: "10px", color: ts }}>
+            {demoMode ? "⚡ Demo mode" : connected ? "Live" : "Offline"}
           </span>
           {stats && (
-            <span className="ml-auto text-[10px] font-mono text-gray-400">{stats.totalRequests} req</span>
+            <span
+              style={{
+                marginLeft: "auto",
+                fontFamily: F.mono,
+                fontSize: "9px",
+                color: tm,
+              }}
+            >
+              {stats.totalRequests} req
+            </span>
           )}
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-3 px-2 overflow-y-auto">
-        {NAV.map(item => (
-          <button key={item.id} onClick={() => dispatch(setActiveTab(item.id))}
-            className={cn(
-              'w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-sans transition-all mb-0.5',
-              activeTab === item.id
-                ? isLight
-                  ? 'bg-red-50 text-red-600 border border-red-200'
-                  : 'bg-accent-red/15 text-white border border-accent-red/25'
-                : isLight
-                  ? 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-surface-2'
-            )}>
-            <span className="text-base leading-none flex-shrink-0">{item.icon}</span>
-            <span className="font-medium">{item.label}</span>
-            {item.id === 'livefeed' && stats?.totalBlocked > 0 && (
-              <span className="ml-auto text-[10px] bg-accent-red text-white font-mono px-1.5 py-0.5 rounded-full">
+      <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto" }}>
+        {NAV.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => dispatch(setActiveTab(item.id))}
+            style={s(item.id)}
+            onMouseEnter={(e) => {
+              if (activeTab !== item.id) {
+                e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                e.currentTarget.style.color = tp;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== item.id) {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = ts;
+              }
+            }}
+          >
+            <span style={{ flex: 1 }}>{item.label}</span>
+            {item.dot === "blocked" && stats?.totalBlocked > 0 && (
+              <span
+                style={{
+                  background: C.crim,
+                  color: "#fff",
+                  fontFamily: F.mono,
+                  fontSize: "9px",
+                  padding: "1px 6px",
+                  borderRadius: "100px",
+                  flexShrink: 0,
+                }}
+              >
                 {stats.totalBlocked}
               </span>
-            )}
-            {item.id === 'worldmap' && stats?.totalBlocked > 0 && (
-              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse" />
             )}
           </button>
         ))}
@@ -113,69 +259,173 @@ export default function Sidebar() {
 
       {/* Mini stats */}
       {stats && (
-        <div className={cn('px-5 py-3 grid grid-cols-2 gap-2 border-t', isLight ? 'border-gray-100' : 'border-border')}>
+        <div
+          style={{
+            padding: "10px 16px",
+            borderTop: `1px solid ${bdr}`,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "8px",
+          }}
+        >
           <div>
-            <div className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">Blocked</div>
-            <div className="text-xs font-mono text-accent-red font-bold">{stats.totalBlocked || 0}</div>
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: "8px",
+                color: tm,
+                textTransform: "uppercase",
+                letterSpacing: "0.12em",
+              }}
+            >
+              Blocked
+            </div>
+            <div
+              style={{
+                fontFamily: F.display,
+                fontSize: "18px",
+                fontWeight: 700,
+                color: C.crim,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              {(stats.totalBlocked || 0).toLocaleString()}
+            </div>
           </div>
           <div>
-            <div className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">Rate</div>
-            <div className="text-xs font-mono text-accent-yellow font-bold">{stats.blockRate || 0}%</div>
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: "8px",
+                color: tm,
+                textTransform: "uppercase",
+                letterSpacing: "0.12em",
+              }}
+            >
+              Rate
+            </div>
+            <div
+              style={{
+                fontFamily: F.display,
+                fontSize: "18px",
+                fontWeight: 700,
+                color: C.textPri,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              {stats.blockRate || 0}%
+            </div>
           </div>
         </div>
       )}
 
-      {/* Action buttons */}
-      <div className={cn('px-3 py-3 space-y-1.5 border-t', isLight ? 'border-gray-100' : 'border-border')}>
-
-        {/* Demo mode */}
-        <button onClick={handleDemo}
-          className={cn(
-            'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-all',
-            demoMode
-              ? 'bg-accent-purple/20 text-accent-purple border border-accent-purple/30'
-              : isLight
-                ? 'bg-gray-50 text-gray-500 border border-gray-200 hover:text-gray-800'
-                : 'bg-surface-2 text-gray-500 border border-border hover:text-gray-300'
-          )}>
-          <span>{demoMode ? '◉' : '◎'}</span>
-          <span>{demoMode ? 'Exit Demo' : 'Demo Mode'}</span>
-          {demoMode && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent-purple animate-pulse" />}
+      {/* Actions */}
+      <div
+        style={{
+          padding: "8px 8px 10px",
+          borderTop: `1px solid ${bdr}`,
+          display: "flex",
+          flexDirection: "column",
+          gap: "4px",
+        }}
+      >
+        <button
+          onClick={handleDemo}
+          style={{
+            ...actionBtn,
+            background: demoMode ? "rgba(124,58,237,0.12)" : "transparent",
+            color: demoMode ? C.purpleL : ts,
+            borderColor: demoMode ? "rgba(124,58,237,0.3)" : bdr,
+          }}
+          onMouseEnter={(e) => {
+            if (!demoMode) e.currentTarget.style.color = tp;
+          }}
+          onMouseLeave={(e) => {
+            if (!demoMode) e.currentTarget.style.color = ts;
+          }}
+        >
+          <span style={{ fontSize: "10px" }}>{demoMode ? "●" : "○"}</span>
+          <span>{demoMode ? "Exit Demo" : "Demo Mode"}</span>
+          {demoMode && (
+            <span
+              style={{
+                marginLeft: "auto",
+                width: "5px",
+                height: "5px",
+                borderRadius: "50%",
+                background: C.purpleL,
+                animation: "pulseCrim 1.5s ease-in-out infinite",
+              }}
+            />
+          )}
         </button>
-
-        {/* PDF Report */}
-        <button onClick={handlePDF}
-          className={cn(
-            'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-all',
-            isLight
-              ? 'bg-gray-50 text-gray-500 border border-gray-200 hover:text-gray-800'
-              : 'bg-surface-2 text-gray-500 border border-border hover:text-gray-300'
-          )}>
-          <span>↓</span>
+        <button
+          onClick={handlePDF}
+          style={actionBtn}
+          onMouseEnter={(e) => (e.currentTarget.style.color = tp)}
+          onMouseLeave={(e) => (e.currentTarget.style.color = ts)}
+        >
+          <span style={{ fontSize: "10px" }}>↓</span>
           <span>Export Report</span>
         </button>
-
-        {/* Theme toggle */}
-        <button onClick={toggle}
-          className={cn(
-            'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-all',
-            isLight
-              ? 'bg-gray-50 text-gray-500 border border-gray-200 hover:text-gray-800'
-              : 'bg-surface-2 text-gray-500 border border-border hover:text-gray-300'
-          )}>
-          <span>{isLight ? '☾' : '☀'}</span>
-          <span>{isLight ? 'Dark Mode' : 'Light Mode'}</span>
+        <button
+          onClick={toggle}
+          style={actionBtn}
+          onMouseEnter={(e) => (e.currentTarget.style.color = tp)}
+          onMouseLeave={(e) => (e.currentTarget.style.color = ts)}
+        >
+          <span style={{ fontSize: "10px" }}>{light ? "☾" : "☀"}</span>
+          <span>{light ? "Dark Mode" : "Light Mode"}</span>
         </button>
       </div>
 
-      {/* Mode badge */}
-      <div className={cn('px-5 py-4 border-t', isLight ? 'border-gray-100' : 'border-border')}>
-        <div className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">WAF Mode</div>
-        <div className="inline-flex items-center gap-1.5 bg-accent-red/10 border border-accent-red/20 rounded px-2 py-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse-red" />
-          <span className="text-accent-red text-[11px] font-mono font-semibold uppercase">BLOCK</span>
+      {/* WAF mode */}
+      <div style={{ padding: "10px 16px 14px", borderTop: `1px solid ${bdr}` }}>
+        <div
+          style={{
+            fontFamily: F.mono,
+            fontSize: "8px",
+            color: tm,
+            textTransform: "uppercase",
+            letterSpacing: "0.14em",
+            marginBottom: "6px",
+          }}
+        >
+          Mode
+        </div>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            border: `1px solid rgba(196,18,48,0.3)`,
+            background: "rgba(196,18,48,0.08)",
+            padding: "4px 10px",
+            borderRadius: "4px",
+          }}
+        >
+          <div
+            style={{
+              width: "5px",
+              height: "5px",
+              borderRadius: "50%",
+              background: C.crim,
+              animation: "pulseCrim 2s ease-in-out infinite",
+            }}
+          />
+          <span
+            style={{
+              fontFamily: F.mono,
+              fontSize: "10px",
+              fontWeight: 600,
+              color: C.crim,
+              letterSpacing: "0.12em",
+            }}
+          >
+            BLOCK
+          </span>
         </div>
       </div>
     </aside>
-  )
+  );
 }

@@ -6,7 +6,6 @@ import {
   useState,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
 } from "react";
 import { cn } from "../lib/utils";
@@ -161,10 +160,9 @@ export function ToastProvider({ children }) {
   const push = useCallback(
     ({ type = "info", title, message, sub, duration = 5000 }) => {
       const id = ++_uid;
-      setToasts((t) => {
-        const next = [...t, { id, type, title, message, sub, duration }];
-        return next.length > 5 ? next.slice(-5) : next;
-      });
+      setToasts((t) => [...t, { id, type, title, message, sub, duration }]);
+      // Keep max 5
+      setToasts((t) => (t.length > 5 ? t.slice(-5) : t));
       return id;
     },
     [],
@@ -174,10 +172,8 @@ export function ToastProvider({ children }) {
     setToasts((t) => t.filter((x) => x.id !== id));
   }, []);
 
-  const value = useMemo(() => ({ push, remove }), [push, remove]);
-
   return (
-    <ToastContext.Provider value={value}>
+    <ToastContext.Provider value={{ push, remove }}>
       {children}
       {/* Toast container — bottom-right */}
       <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2.5 items-end pointer-events-none">

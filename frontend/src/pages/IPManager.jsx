@@ -1,170 +1,773 @@
-// pages/IPManager.jsx
-import { useEffect, useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { fetchBanned, banIP, unbanIP, fetchSuspicious, allowIP } from '../store/wafSlice'
-import { cn } from '../lib/utils'
+// pages/IPManager.jsx — Vantix Design System
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchBanned,
+  banIP,
+  unbanIP,
+  fetchSuspicious,
+  allowIP,
+} from "../store/wafSlice";
+import { useTheme } from "../components/ThemeProvider";
+import { C, F, card } from "../lib/ds";
 
 export default function IPManager() {
-  const dispatch = useDispatch()
-  const { banned, suspicious } = useSelector(s => s.waf)
-  const [tab, setTab] = useState('banned')
-  const [form, setForm] = useState({ ip: '', reason: '', permanent: false })
-  const [allowForm, setAllowForm] = useState('')
-  const [msg, setMsg] = useState(null)
+  const dispatch = useDispatch();
+  const { banned, suspicious } = useSelector((s) => s.waf);
+  const { theme } = useTheme();
+  const light = theme === "light";
 
-  useEffect(() => { dispatch(fetchBanned()); dispatch(fetchSuspicious()) }, [dispatch])
+  const [tab, setTab] = useState("banned");
+  const [form, setForm] = useState({ ip: "", reason: "", permanent: false });
+  const [allowForm, setAllowForm] = useState("");
+  const [msg, setMsg] = useState(null);
 
-  function showMsg(type, text) { setMsg({ type, text }); setTimeout(() => setMsg(null), 3000) }
+  const tp = light ? C.lTextPri : C.textPri;
+  const ts = light ? C.lTextSec : C.textSec;
+  const tm = light ? C.lTextMut : C.textMut;
+  const bdr = light ? C.lBdr : C.bdr;
+  const bg1 = light ? C.lSurface : C.s1;
+  const bg2 = light ? C.lS2 : C.s2;
+
+  useEffect(() => {
+    dispatch(fetchBanned());
+    dispatch(fetchSuspicious());
+  }, [dispatch]);
+
+  function showMsg(type, text) {
+    setMsg({ type, text });
+    setTimeout(() => setMsg(null), 3500);
+  }
 
   async function handleBan(e) {
-    e.preventDefault()
-    if (!form.ip) return
-    await dispatch(banIP(form)); dispatch(fetchBanned())
-    showMsg('success', `${form.ip} banned`); setForm({ ip: '', reason: '', permanent: false })
+    e.preventDefault();
+    if (!form.ip) return;
+    await dispatch(banIP(form));
+    dispatch(fetchBanned());
+    showMsg("success", `${form.ip} banned`);
+    setForm({ ip: "", reason: "", permanent: false });
   }
-  async function handleUnban(ip) { await dispatch(unbanIP(ip)); showMsg('info', `${ip} unbanned`) }
+  async function handleUnban(ip) {
+    await dispatch(unbanIP(ip));
+    showMsg("info", `${ip} unbanned`);
+  }
   async function handleAllow(e) {
-    e.preventDefault()
-    if (!allowForm) return
-    await dispatch(allowIP(allowForm)); showMsg('success', `${allowForm} added to allowlist`); setAllowForm('')
+    e.preventDefault();
+    if (!allowForm) return;
+    await dispatch(allowIP(allowForm));
+    showMsg("success", `${allowForm} added to allowlist`);
+    setAllowForm("");
   }
   async function handleBanSuspicious(ip) {
-    await dispatch(banIP({ ip, reason: 'Promoted from suspicious list', permanent: false }))
-    dispatch(fetchBanned()); dispatch(fetchSuspicious()); showMsg('success', `${ip} banned`)
+    await dispatch(
+      banIP({ ip, reason: "Promoted from suspicious list", permanent: false }),
+    );
+    dispatch(fetchBanned());
+    dispatch(fetchSuspicious());
+    showMsg("success", `${ip} banned`);
   }
 
-  function scoreBar(score) {
-    const pct = Math.min((score / 80) * 100, 100)
-    const color = score >= 80 ? 'bg-accent-red' : score >= 40 ? 'bg-accent-orange' : 'bg-accent-yellow'
-    const textColor = score >= 80 ? 'text-accent-red' : score >= 40 ? 'text-accent-orange' : 'text-accent-yellow'
+  const TABS = [
+    { id: "banned", label: `Banned (${banned.length})` },
+    { id: "suspicious", label: `Suspicious (${suspicious?.length || 0})` },
+    { id: "allowlist", label: "Allowlist" },
+    { id: "honeypot", label: "Honeypot" },
+  ];
+
+  const tabBtn = (id) => ({
+    padding: "6px 14px",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+    fontFamily: F.mono,
+    fontSize: "10px",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    transition: "all 0.15s",
+    background: tab === id ? "rgba(196,18,48,0.15)" : "transparent",
+    color: tab === id ? C.crim : tm,
+    fontWeight: tab === id ? 600 : 400,
+  });
+
+  const inputStyle = {
+    background: bg2,
+    border: `1px solid ${bdr}`,
+    borderRadius: "6px",
+    padding: "8px 12px",
+    fontFamily: F.mono,
+    fontSize: "11px",
+    color: tp,
+    outline: "none",
+    width: "100%",
+  };
+
+  function ScoreBar({ score = 0 }) {
+    const pct = Math.min((score / 80) * 100, 100);
+    const color = score >= 80 ? C.crim : score >= 40 ? "#d97706" : "#ca8a04";
     return (
-      <div className="flex items-center gap-2 flex-1">
-        <div className="flex-1 bg-surface-3 rounded-full h-1.5 overflow-hidden max-w-[80px]">
-          <div className={cn('h-full rounded-full transition-all', color)} style={{ width: `${pct}%` }} />
+      <div
+        style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}
+      >
+        <div
+          style={{
+            flex: 1,
+            height: "4px",
+            background: light ? C.lS2 : C.s3,
+            borderRadius: "2px",
+            overflow: "hidden",
+            maxWidth: "100px",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              background: color,
+              borderRadius: "2px",
+              width: `${pct}%`,
+              transition: "width 0.5s ease",
+            }}
+          />
         </div>
-        <span className={cn('text-[10px] font-mono', textColor)}>{score}</span>
+        <span
+          style={{
+            fontFamily: F.mono,
+            fontSize: "10px",
+            color,
+            fontWeight: 600,
+            width: "24px",
+          }}
+        >
+          {score}
+        </span>
       </div>
-    )
+    );
   }
 
-  const tabs = [
-    { id: 'banned', label: `Banned (${banned.length})` },
-    { id: 'suspicious', label: `Suspicious (${suspicious?.length || 0})` },
-    { id: 'allowlist', label: 'Allowlist' },
-    { id: 'honeypot', label: 'Honeypot' },
-  ]
+  const MsgBanner = () =>
+    msg ? (
+      <div
+        style={{
+          padding: "9px 14px",
+          borderRadius: "7px",
+          fontFamily: F.mono,
+          fontSize: "11px",
+          border: `1px solid`,
+          background:
+            msg.type === "success"
+              ? "rgba(22,163,74,0.1)"
+              : msg.type === "error"
+                ? "rgba(196,18,48,0.1)"
+                : "rgba(37,99,235,0.1)",
+          color:
+            msg.type === "success"
+              ? C.greenL
+              : msg.type === "error"
+                ? "#e55a73"
+                : "#60a5fa",
+          borderColor:
+            msg.type === "success"
+              ? "rgba(22,163,74,0.25)"
+              : msg.type === "error"
+                ? "rgba(196,18,48,0.25)"
+                : "rgba(37,99,235,0.25)",
+        }}
+      >
+        {msg.text}
+      </div>
+    ) : null;
 
   return (
-    <div className="p-6 animate-fade-in space-y-5">
+    <div
+      style={{
+        padding: "24px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+      }}
+    >
+      {/* Header */}
       <div>
-        <div className="font-display font-semibold text-white text-lg">IP Manager</div>
-        <div className="text-xs font-mono text-gray-500 mt-0.5">Manage bans, suspicious IPs, allowlist and honeypot traps</div>
+        <div
+          style={{
+            fontFamily: F.mono,
+            fontSize: "9px",
+            color: C.crim,
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            marginBottom: "6px",
+          }}
+        >
+          // IP Manager
+        </div>
+        <div
+          style={{
+            fontFamily: F.display,
+            fontSize: "24px",
+            fontWeight: 700,
+            color: tp,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          IP Intelligence
+        </div>
+        <div
+          style={{
+            fontFamily: F.mono,
+            fontSize: "11px",
+            color: tm,
+            marginTop: "4px",
+          }}
+        >
+          Manage bans, suspicious IPs, allowlist and honeypot traps
+        </div>
       </div>
 
-      {msg && (
-        <div className={cn('px-4 py-2.5 rounded-lg text-xs font-mono border',
-          msg.type === 'success' ? 'bg-accent-green/10 text-accent-green border-accent-green/20'
-          : msg.type === 'error' ? 'bg-accent-red/10 text-accent-red border-accent-red/20'
-          : 'bg-accent-blue/10 text-accent-blue border-accent-blue/20'
-        )}>{msg.text}</div>
-      )}
+      <MsgBanner />
 
-      <div className="bg-surface-1 border border-border rounded-xl p-5">
-        <div className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">Manual IP Ban</div>
-        <form onSubmit={handleBan} className="flex flex-wrap gap-3 items-end">
-          <div className="flex-1 min-w-[140px]">
-            <label className="text-[10px] font-mono text-gray-600 block mb-1">IP Address</label>
-            <input value={form.ip} onChange={e => setForm(f => ({ ...f, ip: e.target.value }))} placeholder="192.168.1.100"
-              className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs font-mono text-gray-300 placeholder-gray-700 outline-none focus:border-border-strong" />
+      {/* Manual ban form */}
+      <div style={{ ...card(light), padding: "20px" }}>
+        <div
+          style={{
+            fontFamily: F.mono,
+            fontSize: "9px",
+            color: tm,
+            textTransform: "uppercase",
+            letterSpacing: "0.16em",
+            marginBottom: "16px",
+          }}
+        >
+          // Manual IP Ban
+        </div>
+        <form
+          onSubmit={handleBan}
+          style={{
+            display: "flex",
+            gap: "10px",
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+          }}
+        >
+          <div style={{ flex: "1 1 140px", minWidth: "130px" }}>
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: "9px",
+                color: tm,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                marginBottom: "5px",
+              }}
+            >
+              IP Address
+            </div>
+            <input
+              value={form.ip}
+              onChange={(e) => setForm((f) => ({ ...f, ip: e.target.value }))}
+              placeholder="192.168.1.100"
+              style={inputStyle}
+              onFocus={(e) => (e.target.style.borderColor = C.crim)}
+              onBlur={(e) => (e.target.style.borderColor = bdr)}
+            />
           </div>
-          <div className="flex-1 min-w-[180px]">
-            <label className="text-[10px] font-mono text-gray-600 block mb-1">Reason</label>
-            <input value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} placeholder="Suspicious activity"
-              className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs font-mono text-gray-300 placeholder-gray-700 outline-none focus:border-border-strong" />
+          <div style={{ flex: "2 1 200px", minWidth: "160px" }}>
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: "9px",
+                color: tm,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                marginBottom: "5px",
+              }}
+            >
+              Reason
+            </div>
+            <input
+              value={form.reason}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, reason: e.target.value }))
+              }
+              placeholder="Suspicious activity"
+              style={inputStyle}
+              onFocus={(e) => (e.target.style.borderColor = C.crim)}
+              onBlur={(e) => (e.target.style.borderColor = bdr)}
+            />
           </div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="perm" checked={form.permanent} onChange={e => setForm(f => ({ ...f, permanent: e.target.checked }))} className="accent-accent-red" />
-            <label htmlFor="perm" className="text-[11px] font-mono text-gray-500">Permanent</label>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              paddingBottom: "2px",
+            }}
+          >
+            <input
+              type="checkbox"
+              id="perm"
+              checked={form.permanent}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, permanent: e.target.checked }))
+              }
+              style={{ accentColor: C.crim, width: "14px", height: "14px" }}
+            />
+            <label
+              htmlFor="perm"
+              style={{
+                fontFamily: F.mono,
+                fontSize: "11px",
+                color: ts,
+                cursor: "pointer",
+              }}
+            >
+              Permanent
+            </label>
           </div>
-          <button type="submit" className="px-4 py-2 bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/30 text-accent-red text-xs font-mono rounded-lg transition-colors">Ban IP</button>
+          <button
+            type="submit"
+            style={{
+              padding: "8px 20px",
+              background: "rgba(196,18,48,0.15)",
+              border: `1px solid rgba(196,18,48,0.35)`,
+              borderRadius: "6px",
+              color: C.crim,
+              fontFamily: F.mono,
+              fontSize: "11px",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.18s",
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(196,18,48,0.25)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "rgba(196,18,48,0.15)")
+            }
+          >
+            Ban IP
+          </button>
         </form>
       </div>
 
-      <div className="flex items-center gap-1 bg-surface-1 border border-border rounded-lg p-1 w-fit flex-wrap">
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={cn('px-3 py-1.5 rounded text-xs font-mono transition-colors',
-              tab === t.id ? 'bg-accent-red/20 text-accent-red' : 'text-gray-500 hover:text-gray-300')}>
+      {/* Tabs */}
+      <div
+        style={{
+          display: "flex",
+          background: bg1,
+          border: `1px solid ${bdr}`,
+          borderRadius: "8px",
+          padding: "4px",
+          gap: "2px",
+          width: "fit-content",
+          flexWrap: "wrap",
+        }}
+      >
+        {TABS.map((t) => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={tabBtn(t.id)}>
             {t.label}
           </button>
         ))}
       </div>
 
-      {tab === 'banned' && (
-        <div className="bg-surface-1 border border-border rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-border flex justify-between"><div className="text-[10px] font-mono text-gray-600 uppercase tracking-widest">Banned IPs</div><div className="text-[10px] font-mono text-gray-600">{banned.length} entries</div></div>
-          <div className="divide-y divide-border">
-            {banned.length === 0 ? <div className="px-5 py-8 text-center text-gray-600 text-xs font-mono">No IPs currently banned</div>
-            : banned.map((b, i) => (
-              <div key={i} className="px-5 py-3 flex items-center gap-4 hover:bg-surface-2 transition-colors text-xs">
-                <div className="w-36 flex-shrink-0"><div className="font-mono text-gray-300">{b.ip}</div><div className="font-mono text-gray-600 text-[10px]">{b.geo?.country || '—'}</div></div>
-                <div className="flex-1 font-mono text-gray-500 truncate">{b.reason || 'No reason'}</div>
-                {b.permanent && <span className="text-[10px] font-mono text-accent-red border border-accent-red/30 px-1.5 py-0.5 rounded flex-shrink-0">PERM</span>}
-                <button onClick={() => handleUnban(b.ip)} className="text-[10px] font-mono text-gray-600 hover:text-accent-green border border-border hover:border-accent-green/30 px-2 py-1 rounded transition-colors flex-shrink-0">Unban</button>
-              </div>
-            ))}
+      {/* ── BANNED ── */}
+      {tab === "banned" && (
+        <div style={{ ...card(light), overflow: "hidden", padding: 0 }}>
+          <div
+            style={{
+              padding: "12px 20px",
+              borderBottom: `1px solid ${bdr}`,
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: F.mono,
+                fontSize: "9px",
+                color: tm,
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+              }}
+            >
+              // Banned IPs
+            </span>
+            <span style={{ fontFamily: F.mono, fontSize: "9px", color: tm }}>
+              {banned.length} entries
+            </span>
           </div>
+          {banned.length === 0 ? (
+            <div
+              style={{
+                padding: "36px",
+                textAlign: "center",
+                fontFamily: F.mono,
+                fontSize: "11px",
+                color: tm,
+              }}
+            >
+              No IPs currently banned
+            </div>
+          ) : (
+            banned.map((b, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: "11px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "14px",
+                  borderBottom: `1px solid ${light ? C.lBdr : C.bdrS}`,
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = light ? C.lS1 : C.s2)
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+              >
+                <div style={{ width: "140px", flexShrink: 0 }}>
+                  <div
+                    style={{ fontFamily: F.mono, fontSize: "11px", color: tp }}
+                  >
+                    {b.ip}
+                  </div>
+                  <div
+                    style={{ fontFamily: F.mono, fontSize: "9px", color: tm }}
+                  >
+                    {b.geo?.country || "—"}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    fontFamily: F.mono,
+                    fontSize: "10px",
+                    color: ts,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {b.reason || "No reason"}
+                </div>
+                {b.permanent && (
+                  <span
+                    style={{
+                      fontFamily: F.mono,
+                      fontSize: "8px",
+                      color: C.crim,
+                      border: `1px solid rgba(196,18,48,0.3)`,
+                      padding: "2px 6px",
+                      borderRadius: "3px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    PERM
+                  </span>
+                )}
+                <button
+                  onClick={() => handleUnban(b.ip)}
+                  style={{
+                    padding: "4px 12px",
+                    border: `1px solid ${bdr}`,
+                    borderRadius: "5px",
+                    background: "transparent",
+                    color: ts,
+                    fontFamily: F.mono,
+                    fontSize: "10px",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(22,163,74,0.4)";
+                    e.currentTarget.style.color = C.greenL;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = bdr;
+                    e.currentTarget.style.color = ts;
+                  }}
+                >
+                  Unban
+                </button>
+              </div>
+            ))
+          )}
         </div>
       )}
 
-      {tab === 'suspicious' && (
-        <div className="bg-surface-1 border border-border rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-border flex justify-between"><div className="text-[10px] font-mono text-gray-600 uppercase tracking-widest">Suspicious IPs</div><div className="text-[10px] font-mono text-gray-500">Score ≥ 80 = auto-banned</div></div>
-          <div className="divide-y divide-border">
-            {(!suspicious || suspicious.length === 0) ? <div className="px-5 py-8 text-center text-gray-600 text-xs font-mono">No suspicious IPs tracked yet</div>
-            : suspicious.map((s, i) => (
-              <div key={i} className="px-5 py-3 flex items-center gap-4 hover:bg-surface-2 transition-colors text-xs">
-                <div className="w-36 flex-shrink-0"><div className="font-mono text-gray-300">{s.ip}</div><div className="font-mono text-gray-600 text-[10px]">{s.geo?.country || '—'}</div></div>
-                <div className="flex-1">{scoreBar(s.score || 0)}</div>
-                <div className="text-[10px] font-mono text-gray-600 hidden lg:block flex-shrink-0">{s.hits?.length || 0} hits</div>
-                <button onClick={() => handleBanSuspicious(s.ip)} className="text-[10px] font-mono text-gray-600 hover:text-accent-red border border-border hover:border-accent-red/30 px-2 py-1 rounded transition-colors flex-shrink-0">Ban</button>
-              </div>
-            ))}
+      {/* ── SUSPICIOUS ── */}
+      {tab === "suspicious" && (
+        <div style={{ ...card(light), overflow: "hidden", padding: 0 }}>
+          <div
+            style={{
+              padding: "12px 20px",
+              borderBottom: `1px solid ${bdr}`,
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: F.mono,
+                fontSize: "9px",
+                color: tm,
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+              }}
+            >
+              // Suspicious IPs
+            </span>
+            <span style={{ fontFamily: F.mono, fontSize: "9px", color: tm }}>
+              Score ≥ 80 = auto-ban
+            </span>
           </div>
+          {!suspicious || suspicious.length === 0 ? (
+            <div
+              style={{
+                padding: "36px",
+                textAlign: "center",
+                fontFamily: F.mono,
+                fontSize: "11px",
+                color: tm,
+              }}
+            >
+              No suspicious IPs tracked yet
+            </div>
+          ) : (
+            suspicious.map((s, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: "11px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "14px",
+                  borderBottom: `1px solid ${light ? C.lBdr : C.bdrS}`,
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = light ? C.lS1 : C.s2)
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+              >
+                <div style={{ width: "140px", flexShrink: 0 }}>
+                  <div
+                    style={{ fontFamily: F.mono, fontSize: "11px", color: tp }}
+                  >
+                    {s.ip}
+                  </div>
+                  <div
+                    style={{ fontFamily: F.mono, fontSize: "9px", color: tm }}
+                  >
+                    {s.geo?.country || "—"}
+                  </div>
+                </div>
+                <ScoreBar score={s.score || 0} />
+                <span
+                  style={{
+                    fontFamily: F.mono,
+                    fontSize: "10px",
+                    color: tm,
+                    flexShrink: 0,
+                  }}
+                >
+                  {s.hits?.length || 0} hits
+                </span>
+                <button
+                  onClick={() => handleBanSuspicious(s.ip)}
+                  style={{
+                    padding: "4px 12px",
+                    border: `1px solid ${bdr}`,
+                    borderRadius: "5px",
+                    background: "transparent",
+                    color: ts,
+                    fontFamily: F.mono,
+                    fontSize: "10px",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(196,18,48,0.4)";
+                    e.currentTarget.style.color = C.crim;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = bdr;
+                    e.currentTarget.style.color = ts;
+                  }}
+                >
+                  Ban
+                </button>
+              </div>
+            ))
+          )}
         </div>
       )}
 
-      {tab === 'allowlist' && (
-        <div className="space-y-4">
-          <div className="bg-surface-1 border border-border rounded-xl p-5">
-            <div className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Add to Allowlist</div>
-            <div className="text-xs text-gray-500 font-sans mb-4">Allowlisted IPs skip all WAF checks and are never blocked.</div>
-            <form onSubmit={handleAllow} className="flex gap-3">
-              <input value={allowForm} onChange={e => setAllowForm(e.target.value)} placeholder="IP address to allowlist..."
-                className="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs font-mono text-gray-300 placeholder-gray-700 outline-none focus:border-border-strong" />
-              <button type="submit" className="px-4 py-2 bg-accent-green/20 hover:bg-accent-green/30 border border-accent-green/30 text-accent-green text-xs font-mono rounded-lg transition-colors">Add</button>
+      {/* ── ALLOWLIST ── */}
+      {tab === "allowlist" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div style={{ ...card(light), padding: "20px" }}>
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: "9px",
+                color: tm,
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+                marginBottom: "8px",
+              }}
+            >
+              // Add to Allowlist
+            </div>
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: "11px",
+                color: ts,
+                lineHeight: 1.7,
+                marginBottom: "14px",
+              }}
+            >
+              Allowlisted IPs skip all WAF checks and are never blocked.
+            </div>
+            <form
+              onSubmit={handleAllow}
+              style={{ display: "flex", gap: "10px" }}
+            >
+              <input
+                value={allowForm}
+                onChange={(e) => setAllowForm(e.target.value)}
+                placeholder="IP address to allowlist…"
+                style={{ ...inputStyle, flex: 1 }}
+                onFocus={(e) =>
+                  (e.target.style.borderColor = "rgba(22,163,74,0.5)")
+                }
+                onBlur={(e) => (e.target.style.borderColor = bdr)}
+              />
+              <button
+                type="submit"
+                style={{
+                  padding: "8px 20px",
+                  background: "rgba(22,163,74,0.12)",
+                  border: `1px solid rgba(22,163,74,0.3)`,
+                  borderRadius: "6px",
+                  color: C.greenL,
+                  fontFamily: F.mono,
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.18s",
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "rgba(22,163,74,0.2)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "rgba(22,163,74,0.12)")
+                }
+              >
+                Add
+              </button>
             </form>
           </div>
         </div>
       )}
 
-      {tab === 'honeypot' && (
-        <div className="space-y-4">
-          <div className="bg-surface-1 border border-border rounded-xl p-5">
-            <div className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Active Honeypot Paths</div>
-            <div className="text-xs text-gray-500 font-sans mb-4">Requests to these paths permanently ban the attacker instantly.</div>
-            <div className="flex flex-wrap gap-2">
-              {'/admin-secret,/wp-admin,/.env,/config.php,/backup.sql'.split(',').map((p, i) => (
-                <span key={i} className="text-[11px] font-mono text-accent-red bg-accent-red/10 border border-accent-red/20 px-2.5 py-1.5 rounded-lg">{p.trim()}</span>
-              ))}
+      {/* ── HONEYPOT ── */}
+      {tab === "honeypot" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div style={{ ...card(light), padding: "20px" }}>
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: "9px",
+                color: tm,
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+                marginBottom: "8px",
+              }}
+            >
+              // Active Honeypot Paths
+            </div>
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: "11px",
+                color: ts,
+                lineHeight: 1.7,
+                marginBottom: "16px",
+              }}
+            >
+              Requests to these paths permanently ban the attacker instantly.
+              Zero false positives.
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {"/admin-secret,/wp-admin,/.env,/config.php,/backup.sql"
+                .split(",")
+                .map((p, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      fontFamily: F.mono,
+                      fontSize: "11px",
+                      color: C.crim,
+                      background: "rgba(196,18,48,0.1)",
+                      border: `1px solid rgba(196,18,48,0.25)`,
+                      padding: "5px 12px",
+                      borderRadius: "5px",
+                    }}
+                  >
+                    {p.trim()}
+                  </span>
+                ))}
             </div>
           </div>
-          <div className="bg-surface-1 border border-border rounded-xl p-5">
-            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">How to Change</div>
-            <pre className="text-xs font-mono text-gray-400 bg-surface-2 rounded-lg p-3">HONEYPOT_PATHS=/admin-secret,/wp-admin,/.env</pre>
+          <div style={{ ...card(light), padding: "20px" }}>
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: "9px",
+                color: tm,
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+                marginBottom: "8px",
+              }}
+            >
+              // How to Change
+            </div>
+            <pre
+              style={{
+                fontFamily: F.mono,
+                fontSize: "11px",
+                color: ts,
+                background: light ? C.lS2 : C.s2,
+                borderRadius: "6px",
+                padding: "12px",
+                margin: 0,
+                overflowX: "auto",
+              }}
+            >
+              HONEYPOT_PATHS=/admin-secret,/wp-admin,/.env
+            </pre>
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: "10px",
+                color: tm,
+                marginTop: "8px",
+              }}
+            >
+              Edit in <code style={{ color: ts }}>backend/.env</code> then
+              restart.
+            </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
